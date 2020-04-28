@@ -10,11 +10,19 @@ import dash_table.FormatTemplate as FormatTemplate
 from dash_table.Format import Format, Scheme, Sign, Symbol
 import re
 
+# import pathlib
+# # get relative data folder
+# PATH = pathlib.Path(__file__).parent
+# DATA_PATH = PATH.joinpath("data").resolve()
+
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 api_data = pd.read_csv("spx_test.csv")
 api_data['date'] = api_data['date'].apply(lambda x: dt.strptime(x, "%Y-%m-%d").date())
 plot_type = api_data['plot_type'].unique()
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+# app = dash.Dash(__name__)  # , external_stylesheets=external_stylesheets)
+app = dash.Dash(
+    __name__, meta_tags=[{"name": "viewport", "content": "width=device-width"}]
+)
 
 
 def date_to_int(input_date):
@@ -29,8 +37,8 @@ def getMarks(start_date, end_date, spacing=30):
     result = {}
     for i, date_i in enumerate(range(date_to_int(start_date), date_to_int(end_date) + 1)):
         if i % spacing == 0:
-            result[date_i] = datetime.date.fromordinal(date_i)
-    result[date_to_int(end_date)] = end_date
+            result[date_i] = datetime.date.fromordinal(date_i).strftime('%d-%b-%y')
+    result[date_to_int(end_date)] = end_date.strftime('%d-%b-%y')
     return result
 
 
@@ -47,42 +55,181 @@ colors = {
     'font-family': 'Arial',
     'font-size': '15'
 }
-app.layout = html.Div(children=[html.H1(['Performance Plot'],
-                                        style={'text-align': 'center'}),
-                                html.Div([dcc.Dropdown(id='y_axis',
-                                                       options=[{'value': c, 'label': c} for c in plot_type],
-                                                       value='value', )
-                                          ],
-                                         style={"display": "grid", "grid-template-columns": "20% 20% 60%"}
-                                         ),
-                                dcc.RangeSlider(id='date_slider',
-                                                min=date_to_int(min_date),
-                                                max=date_to_int(max_date),
-                                                value=[date_to_int(min_date),
-                                                       date_to_int(max_date)],
-                                                marks=getMarks(min_date, max_date),
-                                                allowCross=False, updatemode='drag'),
-                                html.Div(id='output-container-range-slider'),
-                                dcc.Graph(id='graph_dynamic', animate=True),
-                                html.Div(children=[dcc.DatePickerSingle(id='input_date',
-                                                                        min_date_allowed=min_date,
-                                                                        max_date_allowed=max_date,
-                                                                        date=max_date),
-                                                   dcc.Dropdown(id="input_gap",
-                                                                options=[{'value': i, 'label': i} for i in
-                                                                         range(1, 11)],
-                                                                value=10)]
-                                         ,
-                                         style={"display": "grid", "grid-template-columns": "20% 20% 60%"}
-                                         ),
-                                dash_table.DataTable(id='performance_table',
-                                                     style_cell={'text-align': 'center'},
-                                                     filter_action="native",
-                                                     style_header=colors,
-                                                     style_as_list_view=True,
-                                                     style_table={'overflowX': 'scroll'}),
-                                html.Div(id='output_date_picker'),
-                                ])
+app.layout = html.Div(
+    [
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.Img(
+                            src=app.get_asset_url("dash-logo.png"),
+                            id="plotly-image",
+                            style={
+                                "height": "60px",
+                                "width": "auto",
+                                "margin-bottom": "25px",
+                            },
+                        ),
+                    ],
+                    className="one-third column",
+                ),
+                html.Div(
+                    [
+                        html.H5(
+                            'Performance Plot',
+                            style={"margin-bottom": "0px"},
+                        ),
+                    ],
+                    id='title',
+                    className="one-half column",
+                ),
+                html.Div(
+                    [
+                        html.A(
+                            html.Button("Learn More", id="learn-more-button"),
+                            href="https://github.com/yjthay/ib_dashboard",
+                        )
+                    ],
+                    className="one-third column",
+                    id="button",
+                ),
+            ],
+            id="header",
+            className="row flex-display",
+            style={"margin-bottom": "25px"},
+        ),
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.P(
+                            "Risk Type to Plot on Graph",
+                            className="control_label",
+                        ),
+                        dcc.Dropdown(
+                            id='y_axis',
+                            options=[{'value': c, 'label': c} for c in plot_type],
+                            value='value',
+                            className="mini_container",
+                        ),
+                        html.Div(
+                            [html.H6(id="gamma_text_2"), html.P("Gamma")],
+                            id="gamma_2",
+                            className="mini_container",
+                        ),
+                        html.Div(
+                            [html.H6(id="theta_text_2"), html.P("Theta")],
+                            id="theta_2",
+                            className="mini_container",
+                        ),
+                        html.Div(
+                            [html.H6(id="vega_text_2"), html.P("Vega")],
+                            id="vega_2",
+                            className="mini_container",
+                        ),
+                        html.Div(
+                            [html.H6(id="pnl_text_2"), html.P("P&L")],
+                            id="pnl_2",
+                            className="mini_container",
+                        ),
+                    ],
+                    id="info-container_2",
+                    className="pretty_container four columns",
+                ),
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div(
+                                    [html.H6(id="delta_text"), html.P("Delta")],
+                                    id="delta",
+                                    className="mini_container",
+                                ),
+                                html.Div(
+                                    [html.H6(id="gamma_text"), html.P("Gamma")],
+                                    id="gamma",
+                                    className="mini_container",
+                                ),
+                                html.Div(
+                                    [html.H6(id="theta_text"), html.P("Theta")],
+                                    id="theta",
+                                    className="mini_container",
+                                ),
+                                html.Div(
+                                    [html.H6(id="vega_text"), html.P("Vega")],
+                                    id="vega",
+                                    className="mini_container",
+                                ),
+                                html.Div(
+                                    [html.H6(id="pnl_text"), html.P("P&L")],
+                                    id="pnl",
+                                    className="mini_container",
+                                ),
+                            ],
+                            id="info-container",
+                            className="row container-display",
+                        ),
+                        html.Div(
+                            dcc.RangeSlider(
+                                id='date_slider',
+                                min=date_to_int(min_date),
+                                max=date_to_int(max_date),
+                                value=[date_to_int(min_date),
+                                       date_to_int(max_date)],
+                                marks=getMarks(min_date, max_date),
+                                allowCross=False, updatemode='drag',
+                                className='dcc_control'
+                            ),
+                        ),
+                        html.Div(
+                            [dcc.Graph(id='graph_dynamic', animate=True)],
+                            id="graph_dynamicContainer",
+                            className="pretty_container"
+                        ),
+
+                    ],
+                    id="right-column",
+                    className="eight columns",
+                ),
+            ],
+            className="row flex-display",
+        ),
+        html.Div(
+            [
+
+                html.Div(id='output-container-range-slider'),
+                # dcc.Graph(id='graph_dynamic', animate=True)
+            ],
+            className="row flex-display",
+        ),
+        html.Div(
+            [
+                dcc.DatePickerSingle(
+                    id='input_date',
+                    min_date_allowed=min_date,
+                    max_date_allowed=max_date,
+                    date=max_date
+                ),
+                dcc.Dropdown(
+                    id="input_gap",
+                    options=[{'value': i, 'label': i} for i in
+                             range(1, 11)],
+                    value=10
+                ),
+            ],
+            style={"display": "grid", "grid-template-columns": "20% 20% 60%"}
+        ),
+        dash_table.DataTable(id='performance_table',
+                             style_cell={'text-align': 'center'},
+                             filter_action="native",
+                             style_header=colors,
+                             style_as_list_view=True,
+                             style_table={'overflowX': 'scroll'}),
+        html.Div(id='output_date_picker'),
+    ],
+    id="mainContainer",
+    style={"display": "flex", "flex-direction": "column"},
+)
 
 
 @app.callback(Output('output-container-range-slider', 'children'),
