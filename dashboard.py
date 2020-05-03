@@ -1,14 +1,48 @@
 import dash
+import copy
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 import dash_table
 import pandas as pd
-from datetime import datetime as dt
-import datetime
+from datetime import datetime as dt, date
 import dash_table.FormatTemplate as FormatTemplate
 from dash_table.Format import Format, Scheme, Sign, Symbol
+import calendar
 import re
+
+
+def date_to_int(input_date):
+    ''' Convert datetime to ordinal timestamp '''
+    return input_date.toordinal()
+
+
+def check_month_end(input_date):
+    ''' Check if input date is the last day of month '''
+    if calendar.monthrange(input_date.year, input_date.month)[1] == input_date.day:
+        return True
+    else:
+        return False
+
+
+def getMarks(start_date, end_date, spacing=30):
+    ''' Returns the marks for labeling.
+        Every Nth value will be used.
+    '''
+    result = {}
+    for i in range(date_to_int(start_date), date_to_int(end_date) + 1):
+        date_i = date.fromordinal(i)
+        if i == date_to_int(start_date) or i == date_to_int(end_date):
+            result[i] = {'label': date_i.strftime('%d %b %y'),
+                         'style': {'text-align': 'center',
+                                   'margin': 'auto'}}
+        if date_to_int(start_date) + 14 <= i <= date_to_int(end_date) - 14:
+            if check_month_end(date_i):
+                result[i] = {'label': date_i.strftime('%d %b %y'),
+                             'style': {'text-align': 'center',
+                                       'margin': 'auto'}}
+    return result
+
 
 # import pathlib
 # # get relative data folder
@@ -17,30 +51,25 @@ import re
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 api_data = pd.read_csv("spx_test.csv")
+api_data = api_data[(api_data.plot_type != 'spot') & (api_data.plot_type != 't')]
 api_data['date'] = api_data['date'].apply(lambda x: dt.strptime(x, "%Y-%m-%d").date())
+api_data['value'] = pd.to_numeric(api_data['value'])
 plot_type = api_data['plot_type'].unique()
 # app = dash.Dash(__name__)  # , external_stylesheets=external_stylesheets)
 app = dash.Dash(
     __name__, meta_tags=[{"name": "viewport", "content": "width=device-width"}]
 )
 
-
-def date_to_int(input_date):
-    ''' Convert datetime to ordinal timestamp '''
-    return input_date.toordinal()
-
-
-def getMarks(start_date, end_date, spacing=30):
-    ''' Returns the marks for labeling.
-        Every Nth value will be used.
-    '''
-    result = {}
-    for i, date_i in enumerate(range(date_to_int(start_date), date_to_int(end_date) + 1)):
-        if i % spacing == 0:
-            result[date_i] = datetime.date.fromordinal(date_i).strftime('%d-%b-%y')
-    result[date_to_int(end_date)] = end_date.strftime('%d-%b-%y')
-    return result
-
+layout = dict(
+    autosize=True,
+    automargin=True,
+    margin=dict(l=30, r=30, b=20, t=40),
+    hovermode="closest",
+    plot_bgcolor="#F9F9F9",
+    paper_bgcolor="#F9F9F9",
+    legend=dict(font=dict(size=10), orientation="h"),
+    title="Satellite Overview"
+)
 
 # lower = datetime.date(2020, 5, 30)
 # upper = datetime.date(2020, 6, 8)
@@ -57,6 +86,8 @@ colors = {
 }
 app.layout = html.Div(
     [
+        # # empty Div to trigger javascript file for graph resizing
+        # html.Div(id="output-clientside"),
         html.Div(
             [
                 html.Div(
@@ -75,9 +106,8 @@ app.layout = html.Div(
                 ),
                 html.Div(
                     [
-                        html.H5(
+                        html.H1(
                             'Performance Plot',
-                            style={"margin-bottom": "0px"},
                         ),
                     ],
                     id='title',
@@ -95,7 +125,7 @@ app.layout = html.Div(
                 ),
             ],
             id="header",
-            className="row flex-display",
+            className="row header",
             style={"margin-bottom": "25px"},
         ),
         html.Div(
@@ -110,26 +140,6 @@ app.layout = html.Div(
                             id='y_axis',
                             options=[{'value': c, 'label': c} for c in plot_type],
                             value='value',
-                            className="mini_container",
-                        ),
-                        html.Div(
-                            [html.H6(id="gamma_text_2"), html.P("Gamma")],
-                            id="gamma_2",
-                            className="mini_container",
-                        ),
-                        html.Div(
-                            [html.H6(id="theta_text_2"), html.P("Theta")],
-                            id="theta_2",
-                            className="mini_container",
-                        ),
-                        html.Div(
-                            [html.H6(id="vega_text_2"), html.P("Vega")],
-                            id="vega_2",
-                            className="mini_container",
-                        ),
-                        html.Div(
-                            [html.H6(id="pnl_text_2"), html.P("P&L")],
-                            id="pnl_2",
                             className="mini_container",
                         ),
                     ],
@@ -170,23 +180,33 @@ app.layout = html.Div(
                             className="row container-display",
                         ),
                         html.Div(
-                            dcc.RangeSlider(
-                                id='date_slider',
-                                min=date_to_int(min_date),
-                                max=date_to_int(max_date),
-                                value=[date_to_int(min_date),
-                                       date_to_int(max_date)],
-                                marks=getMarks(min_date, max_date),
-                                allowCross=False, updatemode='drag',
-                                className='dcc_control'
-                            ),
-                        ),
-                        html.Div(
-                            [dcc.Graph(id='graph_dynamic', animate=True)],
+                            [
+                                html.Div(
+                                    [
+                                        html.H4('Date reference'),
+                                        dcc.RangeSlider(
+                                            id='date_slider',
+                                            min=date_to_int(min_date),
+                                            max=date_to_int(max_date),
+                                            value=[date_to_int(min_date),
+                                                   date_to_int(max_date)],
+                                            marks=getMarks(min_date, max_date),
+                                            included=True,
+                                            allowCross=False,
+                                            updatemode='drag',
+                                        )
+                                    ],
+                                ),
+                                dcc.Graph(
+                                    id='graph_dynamic',
+                                    animate=True
+                                ),
+                                html.Div(id='output-container-range-slider',
+                                         style= {'text-align':'left'}),
+                            ],
                             id="graph_dynamicContainer",
                             className="pretty_container"
                         ),
-
                     ],
                     id="right-column",
                     className="eight columns",
@@ -194,14 +214,7 @@ app.layout = html.Div(
             ],
             className="row flex-display",
         ),
-        html.Div(
-            [
 
-                html.Div(id='output-container-range-slider'),
-                # dcc.Graph(id='graph_dynamic', animate=True)
-            ],
-            className="row flex-display",
-        ),
         html.Div(
             [
                 dcc.DatePickerSingle(
@@ -217,7 +230,6 @@ app.layout = html.Div(
                     value=10
                 ),
             ],
-            style={"display": "grid", "grid-template-columns": "20% 20% 60%"}
         ),
         dash_table.DataTable(id='performance_table',
                              style_cell={'text-align': 'center'},
@@ -235,35 +247,53 @@ app.layout = html.Div(
 @app.callback(Output('output-container-range-slider', 'children'),
               [Input('date_slider', 'value')])
 def update_output(date_slider):
-    return 'Examining data from {} to {}'.format(datetime.date.fromordinal(min(date_slider)),
-                                                 datetime.date.fromordinal(max(date_slider)))
+    start_date = date.fromordinal(min(date_slider))
+    end_date = date.fromordinal(max(date_slider))
+    return 'Examining data from {} to {}'.format(dt.strftime(start_date, '%d-%b-%y'),
+                                                 dt.strftime(end_date, '%d-%b-%y'))
 
 
 @app.callback(Output('graph_dynamic', 'figure'),
               [Input('y_axis', 'value'),
                Input('date_slider', 'value')])
-def graph_over_time(y_axis, date_slider):
-    start_date = datetime.date.fromordinal(min(date_slider))
-    end_date = datetime.date.fromordinal(max(date_slider))
+def graph_against_spot(y_axis, date_slider):
+    layout_main_graph = copy.deepcopy(layout)
+
+    start_date = date.fromordinal(min(date_slider))
+    end_date = date.fromordinal(max(date_slider))
     df = api_data.loc[(api_data['date'] == start_date) & (api_data['plot_type'] == y_axis)]
     ref_df = api_data.loc[(api_data['date'] == end_date) & (api_data['plot_type'] == y_axis)]
-    figure = {
-        'data': [
-            {'x': df['spot'],
-             'y': df['value'],
-             'mode': 'lines',
-             'name': start_date,
-             },
-            {'x': ref_df['spot'],
-             'y': ref_df['value'],
-             'mode': 'lines',
-             'name': end_date,
-             },
-        ],
-        'layout': {
-            'margin': {'t': 0, 'b': 180}
-        }
-    }
+    join_df = ref_df.merge(right=df, how='left', on=['spot', 'plot_type'], suffixes=['_end', '_start'])
+
+    colors = []
+    for i in range(min(join_df.spot), max(join_df.spot) + 1):
+        colors.append("rgb(123, 199, 255)")
+
+    data = [
+        dict(
+            type='bar',
+            x=join_df['spot'],
+            y=(join_df.value_start - join_df.value_end).astype(int),
+            name='Start-End',
+            marker=dict(color=colors),
+        ),
+        dict(
+            x=df['spot'],
+            y=df['value'],
+            mode='lines',
+            name='Start',
+        ),
+        dict(
+            x=ref_df['spot'],
+            y=ref_df['value'],
+            mode='lines',
+            name='End',
+        ),
+    ]
+    layout_main_graph['title'] = 'Graph vs spot'
+    layout_main_graph["showlegend"] = True
+    layout_main_graph["autosize"] = True
+    figure = dict(data=data, layout=layout_main_graph)
     return figure
 
 
@@ -282,7 +312,7 @@ def simple_dash_table(input_gap, input_date):
     df = api_data[api_data['date'] == input_date]
     pt = df.pivot_table(columns=['spot'], values='value', index=['date', 'plot_type'],
                         aggfunc=sum).reset_index()
-    pt = pt[(pt.plot_type != 'spot') & (pt.plot_type != 't')]
+    # pt = pt[(pt.plot_type != 'spot') & (pt.plot_type != 't')]
     for i in pt.columns:
         if isinstance(i, int):
             pt[i] = pd.to_numeric(pt[i])
