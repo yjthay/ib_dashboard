@@ -44,18 +44,12 @@ def getMarks(start_date, end_date, spacing=30):
     return result
 
 
-# import pathlib
-# # get relative data folder
-# PATH = pathlib.Path(__file__).parent
-# DATA_PATH = PATH.joinpath("data").resolve()
-
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 api_data = pd.read_csv("spx_test.csv")
 api_data = api_data[(api_data.plot_type != 'spot') & (api_data.plot_type != 't')]
 api_data['date'] = api_data['date'].apply(lambda x: dt.strptime(x, "%Y-%m-%d").date())
 api_data['value'] = pd.to_numeric(api_data['value'])
 plot_type = api_data['plot_type'].unique()
-# app = dash.Dash(__name__)  # , external_stylesheets=external_stylesheets)
 app = dash.Dash(
     __name__, meta_tags=[{"name": "viewport", "content": "width=device-width"}]
 )
@@ -86,8 +80,6 @@ colors = {
 }
 app.layout = html.Div(
     [
-        # # empty Div to trigger javascript file for graph resizing
-        # html.Div(id="output-clientside"),
         html.Div(
             [
                 html.Div(
@@ -242,7 +234,6 @@ app.layout = html.Div(
     id="mainContainer",
     style={"display": "flex", "flex-direction": "column"},
 )
-
 
 @app.callback(Output('output-container-range-slider', 'children'),
               [Input('date_slider', 'value')])
