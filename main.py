@@ -128,11 +128,22 @@ app.layout = html.Div(
                             "Risk Type to Plot on Graph",
                             className="control_label",
                         ),
-                        dcc.Dropdown(
-                            id='y_axis',
-                            options=[{'value': c, 'label': c} for c in plot_type],
-                            value='value',
-                            className="mini_container",
+                        # dcc.Dropdown(
+                        #     id='y_axis',
+                        #     options=[{'value': c, 'label': c} for c in plot_type],
+                        #     value='value',
+                        #     className="mini_container",
+                        # ),
+                        html.Div(
+                            [
+                                html.P('Granularity of Spot'),
+                                dcc.Dropdown(
+                                    id="input_gap",
+                                    options=[{'value': i, 'label': i} for i in
+                                             range(1, 11)],
+                                    value=10
+                                ),
+                            ],
                         ),
                     ],
                     id="info-container_2",
@@ -142,31 +153,38 @@ app.layout = html.Div(
                     [
                         html.Div(
                             [
-                                html.Div(
-                                    [html.H6(id="delta_text"), html.P("Delta")],
-                                    id="delta",
-                                    className="mini_container",
+                                dcc.RadioItems(
+                                    id='radio_y_axis',
+                                    options=[{'value': c, 'label': c} for c in plot_type],
+                                    value='value',
+                                    className="mini_container radiobutton-group",
+                                    # inputStyle={'margin':'0% 3%'},
                                 ),
-                                html.Div(
-                                    [html.H6(id="gamma_text"), html.P("Gamma")],
-                                    id="gamma",
-                                    className="mini_container",
-                                ),
-                                html.Div(
-                                    [html.H6(id="theta_text"), html.P("Theta")],
-                                    id="theta",
-                                    className="mini_container",
-                                ),
-                                html.Div(
-                                    [html.H6(id="vega_text"), html.P("Vega")],
-                                    id="vega",
-                                    className="mini_container",
-                                ),
-                                html.Div(
-                                    [html.H6(id="pnl_text"), html.P("P&L")],
-                                    id="pnl",
-                                    className="mini_container",
-                                ),
+                                # html.Div(
+                                #     [html.H6(id="delta_text"), html.P("Delta")],
+                                #     id="delta",
+                                #     className="mini_container",
+                                # ),
+                                # html.Div(
+                                #     [html.H6(id="gamma_text"), html.P("Gamma")],
+                                #     id="gamma",
+                                #     className="mini_container",
+                                # ),
+                                # html.Div(
+                                #     [html.H6(id="theta_text"), html.P("Theta")],
+                                #     id="theta",
+                                #     className="mini_container",
+                                # ),
+                                # html.Div(
+                                #     [html.H6(id="vega_text"), html.P("Vega")],
+                                #     id="vega",
+                                #     className="mini_container",
+                                # ),
+                                # html.Div(
+                                #     [html.H6(id="pnl_text"), html.P("P&L")],
+                                #     id="pnl",
+                                #     className="mini_container",
+                                # ),
                             ],
                             id="info-container",
                             className="row container-display",
@@ -175,7 +193,7 @@ app.layout = html.Div(
                             [
                                 html.Div(
                                     [
-                                        html.H4('Date reference'),
+                                        html.P('Date reference'),
                                         dcc.RangeSlider(
                                             id='date_slider',
                                             min=date_to_int(min_date),
@@ -191,10 +209,11 @@ app.layout = html.Div(
                                 ),
                                 dcc.Graph(
                                     id='graph_dynamic',
-                                    animate=True
+                                    animate=True,
+
                                 ),
                                 html.Div(id='output-container-range-slider',
-                                         style= {'text-align':'left'}),
+                                         style={'text-align': 'left'}),
                             ],
                             id="graph_dynamicContainer",
                             className="pretty_container"
@@ -209,33 +228,56 @@ app.layout = html.Div(
 
         html.Div(
             [
-                dcc.DatePickerSingle(
-                    id='input_date',
-                    min_date_allowed=min_date,
-                    max_date_allowed=max_date,
-                    date=max_date
-                ),
-                dcc.Dropdown(
-                    id="input_gap",
-                    options=[{'value': i, 'label': i} for i in
-                             range(1, 11)],
-                    value=10
+                html.Div(
+                    [
+                        html.Div(
+                            id='output_date_picker'
+                        ),
+                        dash_table.DataTable(
+                            id='performance_table',
+                            filter_action="native",
+                            style_header=colors,
+                            style_as_list_view=True,
+                            style_table={'overflowX': 'scroll'}
+                        ),
+                    ],
+                    className="eight columns",
                 ),
             ],
+            id='lower-dash_table',
+            className="row flex-display",
         ),
-        dash_table.DataTable(id='performance_table',
-                             style_cell={'text-align': 'center'},
-                             filter_action="native",
-                             style_header=colors,
-                             style_as_list_view=True,
-                             style_table={'overflowX': 'scroll'}),
-        html.Div(id='output_date_picker'),
+
     ],
     id="mainContainer",
     style={"display": "flex", "flex-direction": "column"},
 )
 
+
+# @app.callback(
+#     [
+#         Output("delta_text", "children"),
+#         Output("gamma_text", "children"),
+#         Output("theta_text", "children"),
+#         Output("vega_text", "children"),
+#         Output("pnl_text", "children"),
+#     ],
+#     [
+#         Input('y_axis', 'value'),
+#         Input('date_slider', 'value')
+#     ],
+# )
+# def update_mini_containers(y_axis, date_slider):
+#     start_date = date.fromordinal(min(date_slider))
+#     end_date = date.fromordinal(max(date_slider))
+#     df = api_data.loc[(api_data['date'] == start_date) & (api_data['plot_type'] == y_axis)]
+#     ref_df = api_data.loc[(api_data['date'] == end_date) & (api_data['plot_type'] == y_axis)]
+#     join_df = ref_df.merge(right=df, how='left', on=['spot', 'plot_type'], suffixes=['_end', '_start'])
+#
+#     return data[0] + " mcf", data[1] + " bbl", data[2] + " bbl"
+
 @app.callback(Output('output-container-range-slider', 'children'),
+
               [Input('date_slider', 'value')])
 def update_output(date_slider):
     start_date = date.fromordinal(min(date_slider))
@@ -245,7 +287,7 @@ def update_output(date_slider):
 
 
 @app.callback(Output('graph_dynamic', 'figure'),
-              [Input('y_axis', 'value'),
+              [Input('radio_y_axis', 'value'),
                Input('date_slider', 'value')])
 def graph_against_spot(y_axis, date_slider):
     layout_main_graph = copy.deepcopy(layout)
@@ -284,30 +326,25 @@ def graph_against_spot(y_axis, date_slider):
     layout_main_graph['title'] = 'Graph vs spot'
     layout_main_graph["showlegend"] = True
     layout_main_graph["autosize"] = True
+    layout_main_graph["hovermode"] = 'compare'
     figure = dict(data=data, layout=layout_main_graph)
     return figure
 
 
-@app.callback(Output('output_date_picker', 'children'),
-              [Input('input_date', 'date')])
-def update_output(input_date):
-    input_date = dt.strptime(re.split('T| ', input_date)[0], '%Y-%m-%d').date()
-    return 'Examining data from {}'.format(input_date)
-
-
 @app.callback([Output('performance_table', 'columns'), Output('performance_table', 'data'),
                Output('performance_table', 'style_data_conditional')],
-              [Input('input_gap', 'value'), Input('input_date', 'date')])
-def simple_dash_table(input_gap, input_date):
-    input_date = dt.strptime(re.split('T| ', input_date)[0], '%Y-%m-%d').date()
-    df = api_data[api_data['date'] == input_date]
+              [Input('input_gap', 'value'), Input('date_slider', 'value')])
+def simple_dash_table(input_gap, date_slider):
+    # input_date = dt.strptime(re.split('T| ', input_date)[0], '%Y-%m-%d').date()
+    start_date = date.fromordinal(min(date_slider))
+    end_date = date.fromordinal(max(date_slider))
+    df = api_data[(api_data['date'] == start_date) | (api_data['date'] == end_date)]
     pt = df.pivot_table(columns=['spot'], values='value', index=['date', 'plot_type'],
                         aggfunc=sum).reset_index()
     # pt = pt[(pt.plot_type != 'spot') & (pt.plot_type != 't')]
     for i in pt.columns:
         if isinstance(i, int):
             pt[i] = pd.to_numeric(pt[i])
-    temp = pt.loc[pt['date'] == input_date]
     columns = [{'id': 'date', 'name': 'date', 'type': 'text'}] + \
               [{'id': 'plot_type', 'name': 'plot_type', 'type': 'text'}] + \
               [{'id': str(i),
@@ -319,8 +356,8 @@ def simple_dash_table(input_gap, input_date):
                     scheme=Scheme.fixed,
                     sign=Sign.parantheses
                 )}
-               for i in temp.columns if isinstance(i, int) and i % int(input_gap) == 0]
-    data = temp[[i for i in temp.columns if isinstance(i, str) or i % int(input_gap) == 0]].to_dict('records')
+               for i in pt.columns if isinstance(i, int) and i % int(input_gap) == 0]
+    data = pt[[i for i in pt.columns if isinstance(i, str) or i % int(input_gap) == 0]].to_dict('records')
     style_data_conditional = [{'if': {'row_index': 'odd'}, 'backgroundColor': '#e2f2f6'}] + \
                              [{'if': {'column_id': col['id'], 'filter_query': '{}<0.0'.format("{" + col['id'] + "}")},
                                'color': 'red'}
@@ -329,4 +366,4 @@ def simple_dash_table(input_gap, input_date):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.server(host='0.0.0.0', port=8080, debug=True)

@@ -59,3 +59,16 @@ body {
     float: right;
     margin: 20px 10px;
 }
+
+.radiobutton-group > label {
+    padding: .25em .5em;
+    cursor: pointer;
+    margin:  .25em 3%;
+}
+
+.radiobutton-group > label:hover {
+    box-shadow: inset 0px 1px 2px rgba(0,0,0,.2); }
+
+.radiobutton-group > label:active {
+    background:red
+    }
