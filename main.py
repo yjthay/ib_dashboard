@@ -9,7 +9,7 @@ from datetime import datetime as dt, date
 import dash_table.FormatTemplate as FormatTemplate
 from dash_table.Format import Format, Scheme, Sign, Symbol
 import calendar
-import re
+import os
 
 
 def date_to_int(input_date):
@@ -44,15 +44,12 @@ def getMarks(start_date, end_date, spacing=30):
     return result
 
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-api_data = pd.read_csv("spx_test.csv")
+csv_file_path = os.path.join('data/spx_test.csv')
+api_data = pd.read_csv(csv_file_path)
 api_data = api_data[(api_data.plot_type != 'spot') & (api_data.plot_type != 't')]
 api_data['date'] = api_data['date'].apply(lambda x: dt.strptime(x, "%Y-%m-%d").date())
 api_data['value'] = pd.to_numeric(api_data['value'])
 plot_type = api_data['plot_type'].unique()
-app = dash.Dash(
-    __name__, meta_tags=[{"name": "viewport", "content": "width=device-width"}]
-)
 
 layout = dict(
     autosize=True,
@@ -78,6 +75,10 @@ colors = {
     'font-family': 'Arial',
     'font-size': '15'
 }
+app = dash.Dash(__name__, assets_folder='assets')
+server = app.server
+app.config.suppress_callback_exceptions = True
+
 app.layout = html.Div(
     [
         html.Div(
@@ -128,12 +129,6 @@ app.layout = html.Div(
                             "Risk Type to Plot on Graph",
                             className="control_label",
                         ),
-                        # dcc.Dropdown(
-                        #     id='y_axis',
-                        #     options=[{'value': c, 'label': c} for c in plot_type],
-                        #     value='value',
-                        #     className="mini_container",
-                        # ),
                         html.Div(
                             [
                                 html.P('Granularity of Spot'),
@@ -158,7 +153,7 @@ app.layout = html.Div(
                                     options=[{'value': c, 'label': c} for c in plot_type],
                                     value='value',
                                     className="mini_container radiobutton-group",
-                                    # inputStyle={'margin':'0% 3%'},
+                                    inputStyle={'margin':'1%'},
                                 ),
                                 # html.Div(
                                 #     [html.H6(id="delta_text"), html.P("Delta")],
@@ -366,4 +361,5 @@ def simple_dash_table(input_gap, date_slider):
 
 
 if __name__ == '__main__':
-    app.run_server(host='0.0.0.0', port=8080, debug=True, use_reloader=False)
+    # app.run_server(host='0.0.0.0', port=8080, debug=True, use_reloader=False)
+    app.run_server(debug=True)

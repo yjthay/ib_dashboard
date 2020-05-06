@@ -70,5 +70,5 @@ body {
     box-shadow: inset 0px 1px 2px rgba(0,0,0,.2); }
 
 .radiobutton-group > label:active {
-    background:red
+    background:lightgrey
     }
