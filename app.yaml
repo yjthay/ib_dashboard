@@ -1,4 +1,4 @@
-service: default
+service: simple-dash-app-engine-app
 runtime: python37
 
 basic_scaling:
