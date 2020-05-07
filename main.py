@@ -153,7 +153,6 @@ app.layout = html.Div(
                                     options=[{'value': c, 'label': c} for c in plot_type],
                                     value='value',
                                     className="mini_container radiobutton-group",
-                                    inputStyle={'margin': '1%'},
                                 ),
                                 # html.Div(
                                 #     [html.H6(id="delta_text"), html.P("Delta")],
@@ -188,7 +187,7 @@ app.layout = html.Div(
                             [
                                 html.Div(
                                     [
-                                        html.P('Date reference'),
+                                        # html.P('Date reference'),
                                         dcc.RangeSlider(
                                             id='date_slider',
                                             min=date_to_int(min_date),
@@ -200,7 +199,7 @@ app.layout = html.Div(
                                             allowCross=False,
                                             updatemode='drag',
                                         )
-                                    ],
+                                    ], className='date-slider'
                                 ),
                                 dcc.Graph(
                                     id='graph_dynamic',
@@ -360,5 +359,5 @@ def simple_dash_table(input_gap, date_slider):
 
 
 if __name__ == '__main__':
-    app.run_server(host='0.0.0.0', port=8080, debug=True, use_reloader=False)
-    # app.run_server(debug=True)
+    # app.run_server(host='0.0.0.0', port=8080, debug=True, use_reloader=False)
+    app.run_server(debug=True)

@@ -52,6 +52,10 @@ body {
     flex-wrap: wrap;
 }
 
+.date-slider{
+    padding: 2em 2em;
+}
+
 #learn-more-button {
     height: 50%;
     padding: 10px 20px;
