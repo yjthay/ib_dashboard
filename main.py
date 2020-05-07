@@ -233,7 +233,7 @@ app.layout = html.Div(
                 ),
             ],
             id='lower-dash_table',
-            className="row flex-display",
+            className="row pretty_container",
         ),
 
     ],
