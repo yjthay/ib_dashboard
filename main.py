@@ -88,11 +88,6 @@ app.layout = html.Div(
                         html.Img(
                             src=app.get_asset_url("dash-logo.png"),
                             id="plotly-image",
-                            style={
-                                "height": "60px",
-                                "width": "auto",
-                                "margin-bottom": "25px",
-                            },
                         ),
                     ],
                     className="one-third column",

@@ -56,11 +56,19 @@ body {
     padding: 2em 2em;
 }
 
-#learn-more-button {
-    height: 50%;
+#plotly-image{
+    height: 60px;
+    width: auto;
+    float: left;
     padding: 10px 20px;
+    margin: 20px 10px;
+}
+
+#learn-more-button {
+    height: 60px;
     font-size: 15px;
     float: right;
+    padding: 10px 20px;
     margin: 20px 10px;
 }
 
