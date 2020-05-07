@@ -198,7 +198,6 @@ app.layout = html.Div(
                                 ),
                                 dcc.Graph(
                                     id='graph_dynamic',
-                                    animate=True,
                                 ),
                                 html.Div(id='output-container-range-slider',
                                          style={'text-align': 'left'}),
