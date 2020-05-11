@@ -83,6 +83,7 @@ app.config.suppress_callback_exceptions = True
 
 app.layout = html.Div(
     [
+        dcc.Store(id='compute_engine'),
         html.Div(
             [
                 html.Div(
@@ -215,8 +216,14 @@ app.layout = html.Div(
                                     style_header=colors,
                                     editable=True,
                                     include_headers_on_copy_paste=True,
+                                    export_format='csv',
                                 ),
-                                html.Button('Add Row', id='add-row-button', n_clicks=0),
+                                html.Div(
+                                    [
+                                        html.Button('Add Row', id='add-row-button', n_clicks=0),
+                                        html.Button('Compute', id='compute', n_clicks=0),
+                                    ], className='row'
+                                ),
                                 html.Div(
                                     [
                                         # html.P('Date reference'),
@@ -363,6 +370,16 @@ def add_row(n_clicks, rows, columns):
     if n_clicks > 0:
         rows.append({c['id']: '' for c in columns})
     return rows
+
+
+@app.callback(Output('compute_engine', 'data'),
+              [Input('compute', 'n_clicks')],
+              [State('input_table', 'data'),
+               State('input_table', 'columns')])
+def add_row(n_clicks, data, columns):
+    if n_clicks > 0:
+        pass
+    return data
 
 
 @app.callback([Output('performance_table', 'columns'), Output('performance_table', 'data'),
