@@ -2,7 +2,7 @@ import dash
 import copy
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import dash_table
 import pandas as pd
 from datetime import datetime as dt, date
@@ -44,8 +44,10 @@ def getMarks(start_date, end_date, spacing=30):
     return result
 
 
-csv_file_path = os.path.join('data/spx_test.csv')
-api_data = pd.read_csv(csv_file_path)
+sample_api_path = os.path.join('data/spx_test.csv')
+sample_input_path = os.path.join('data/sample_input_table.csv')
+sample_df = pd.read_csv(sample_input_path)
+api_data = pd.read_csv(sample_api_path)
 api_data = api_data[(api_data.plot_type != 'spot') & (api_data.plot_type != 't')]
 api_data['date'] = api_data['date'].apply(lambda x: dt.strptime(x, "%Y-%m-%d").date())
 api_data['value'] = pd.to_numeric(api_data['value'])
@@ -120,13 +122,23 @@ app.layout = html.Div(
             [
                 html.Div(
                     [
-                        html.P(
-                            "Risk Type to Plot on Graph",
-                            className="control_label",
+                        html.Div(
+                            [
+                                html.H3(
+                                    "Risk Type to Plot on Graph",
+                                ),
+                                dcc.RadioItems(
+                                    id='radio_y_axis',
+                                    options=[{'value': c, 'label': c} for c in plot_type],
+                                    value='value',
+                                    className="radiobutton-group",
+                                ),
+                            ],
+                            className="container-display",
                         ),
                         html.Div(
                             [
-                                html.P('Granularity of Spot'),
+                                html.H3('Granularity of Spot'),
                                 dcc.Dropdown(
                                     id="input_gap",
                                     options=[{'value': i, 'label': i} for i in
@@ -143,12 +155,12 @@ app.layout = html.Div(
                     [
                         html.Div(
                             [
-                                dcc.RadioItems(
-                                    id='radio_y_axis',
-                                    options=[{'value': c, 'label': c} for c in plot_type],
-                                    value='value',
-                                    className="mini_container radiobutton-group",
-                                ),
+                                # dcc.RadioItems(
+                                #     id='radio_y_axis',
+                                #     options=[{'value': c, 'label': c} for c in plot_type],
+                                #     value='value',
+                                #     className="mini_container radiobutton-group",
+                                # ),
                                 # html.Div(
                                 #     [html.H6(id="delta_text"), html.P("Delta")],
                                 #     id="delta",
@@ -180,6 +192,31 @@ app.layout = html.Div(
                         ),
                         html.Div(
                             [
+                                dash_table.DataTable(
+                                    id='input_table',
+                                    data=sample_df.to_dict('records') + [{}] * 2,
+                                    columns=[{'id': i, 'name': i, 'presentation': 'input'} if i != 'type' else
+                                             {'id': i, 'name': i, 'presentation': 'dropdown'} for i in
+                                             sample_df.columns],
+                                    row_deletable=True,
+                                    dropdown={
+                                        'type': {
+                                            'options': [
+                                                {'label': i, 'value': i}
+                                                for i in ["Call", "Put"]
+                                            ]
+                                        },
+                                    },
+                                    style_cell={
+                                        'height': 'auto',
+                                        'width': 'auto',
+                                        'text-align': 'center'
+                                    },
+                                    style_header=colors,
+                                    editable=True,
+                                    include_headers_on_copy_paste=True,
+                                ),
+                                html.Button('Add Row', id='add-row-button', n_clicks=0),
                                 html.Div(
                                     [
                                         # html.P('Date reference'),
@@ -264,7 +301,6 @@ app.layout = html.Div(
 #     return data[0] + " mcf", data[1] + " bbl", data[2] + " bbl"
 
 @app.callback(Output('output-container-range-slider', 'children'),
-
               [Input('date_slider', 'value')])
 def update_output(date_slider):
     start_date = date.fromordinal(min(date_slider))
@@ -316,6 +352,17 @@ def graph_against_spot(y_axis, date_slider):
     layout_main_graph["hovermode"] = 'compare'
     figure = dict(data=data, layout=layout_main_graph)
     return figure
+
+
+@app.callback(
+    Output('input_table', 'data'),
+    [Input('add-row-button', 'n_clicks')],
+    [State('input_table', 'data'),
+     State('input_table', 'columns')])
+def add_row(n_clicks, rows, columns):
+    if n_clicks > 0:
+        rows.append({c['id']: '' for c in columns})
+    return rows
 
 
 @app.callback([Output('performance_table', 'columns'), Output('performance_table', 'data'),
