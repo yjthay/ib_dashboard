@@ -72,6 +72,11 @@ body {
     padding: 10px 20px;
     margin: 20px 10px;
 }
+.radiobutton-group {
+display:flex;
+flex-direction:column;
+margin:1em;
+}
 
 .radiobutton-group > label {
     padding: .25em .5em;
@@ -85,3 +90,8 @@ body {
 .radiobutton-group > label:active {
     background:lightgrey
     }
+
+#input_table {
+margin: 1em;
+
+}
