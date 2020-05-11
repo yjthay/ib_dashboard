@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"time"
+
 	"github.com/chobie/go-gaussian"
 )
 
@@ -45,7 +46,7 @@ func opt(Type, evalDate, expDate string, K, S, r, Q, price, sigma float64) *vani
 
 func calculateT(evalDate string, expDate string) float64 {
 	// Calculate the time to expiry for an option and return it in years
-	// Time package uses 2006 jan 02 as reference fmt https://golang.org/src/time/format.go
+	// Time package uses 2006 Jan 02 as reference fmt https://golang.org/src/time/format.go
 	dtfmt := "20060102"
 	evalDt, _ := time.Parse(dtfmt, evalDate)
 	expDt, _ := time.Parse(dtfmt, expDate)
@@ -61,6 +62,8 @@ func (opt *vanillaOption) d2(impVol float64) float64 {
 }
 
 func (opt *vanillaOption) impliedVol() float64 {
+	// Using Newton Raphson Method https://en.wikipedia.org/wiki/Newton%27s_method#Description
+	// Can make further refinements to ensure that the initialisation step is done even better
 	v := math.Sqrt(2*math.Pi/opt.T) * opt.price / opt.S
 	//fmt.Printf(“ — initial vol: %v\n”, v)
 	for i := 0; i < 100; i++ {
