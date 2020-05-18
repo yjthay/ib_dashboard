@@ -123,7 +123,7 @@ func (opt *VanillaOption) init() {
 		}
 		gamma = nPrime * qDisc / (opt.Spot * opt.Sigma * math.Sqrt(T))
 		vega = 0.01 * opt.Spot * qDisc * math.Sqrt(T) * nPrime
-		opt.Greeks = append(opt.Greeks, Greek{T: T, Delta: delta, Vega: vega, Theta: theta, Gamma: gamma, PnL: pnl})
+		opt.Greeks = append(opt.Greeks, Greek{T: float64(daysToExpiry), Delta: delta, Vega: vega, Theta: theta, Gamma: gamma, PnL: pnl})
 	}
 }
 
