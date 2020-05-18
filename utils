@@ -1,0 +1,33 @@
+import calendar
+from datetime import date
+
+def date_to_int(input_date):
+    ''' Convert datetime to ordinal timestamp '''
+    return input_date.toordinal()
+
+
+def check_month_end(input_date):
+    ''' Check if input date is the last day of month '''
+    if calendar.monthrange(input_date.year, input_date.month)[1] == input_date.day:
+        return True
+    else:
+        return False
+
+
+def getMarks(start_date, end_date, spacing=30):
+    ''' Returns the marks for labeling.
+        Every Nth value will be used.
+    '''
+    result = {}
+    for i in range(date_to_int(start_date), date_to_int(end_date) + 1):
+        date_i = date.fromordinal(i)
+        if i == date_to_int(start_date) or i == date_to_int(end_date):
+            result[i] = {'label': date_i.strftime('%d %b %y'),
+                         'style': {'text-align': 'center',
+                                   'margin': 'auto'}}
+        if date_to_int(start_date) + 14 <= i <= date_to_int(end_date) - 14:
+            if check_month_end(date_i):
+                result[i] = {'label': date_i.strftime('%d %b %y'),
+                             'style': {'text-align': 'center',
+                                       'margin': 'auto'}}
+    return result
