@@ -26,12 +26,13 @@ type VanillaOption struct {
 
 // Greek is a struct that creates a container holding information of the greeks of the option
 type Greek struct {
-	T     float64 `json:"daysToExpiry"` // Time in days btw exp_date and eval_date
-	Delta float64 `json:"delta"`        // Delta of option
-	Gamma float64 `json:"gamma"`        // Gamma of option
-	Theta float64 `json:"theta"`        // Theta of option
-	Vega  float64 `json:"vega"`         // Vega of option
-	PnL   float64 `json:"PnL"`          // PnL of option
+	T       float64 `json:"daysToExpiry"` // Time in days btw exp_date and eval_date
+	RefSpot float64 `json:"refSpot"`      // Spot used for options calc
+	Delta   float64 `json:"delta"`        // Delta of option
+	Gamma   float64 `json:"gamma"`        // Gamma of option
+	Theta   float64 `json:"theta"`        // Theta of option
+	Vega    float64 `json:"vega"`         // Vega of option
+	PnL     float64 `json:"PnL"`          // PnL of option
 }
 
 // Opt is a function initialise an option and generate the associated risk metrics with it
@@ -60,29 +61,29 @@ func calculateT(EvalDate string, ExpDate string) float64 {
 	return (expDt.Sub(evalDt).Hours() / 24)
 }
 
-func (opt *VanillaOption) d1(impVol, T float64) float64 {
-	return (math.Log(opt.Spot/opt.Strike) + T*(opt.RiskFreeRate-opt.Q+0.5*math.Pow(impVol, 2))) / (impVol * math.Sqrt(T))
+func (opt *VanillaOption) d1(impVol, T, refSpot float64) float64 {
+	return (math.Log(refSpot/opt.Strike) + T*(opt.RiskFreeRate-opt.Q+0.5*math.Pow(impVol, 2))) / (impVol * math.Sqrt(T))
 }
 
-func (opt *VanillaOption) d2(impVol, T float64) float64 {
-	return (opt.d1(impVol, T) - (impVol * math.Sqrt(T)))
+func (opt *VanillaOption) d2(impVol, T, refSpot float64) float64 {
+	return (opt.d1(impVol, T, refSpot) - (impVol * math.Sqrt(T)))
 }
 
-func (opt *VanillaOption) impliedVol(startDate string) float64 {
+func (opt *VanillaOption) impliedVol(startDate string, refSpot float64) float64 {
 	// Using Newton Raphson Method https://en.wikipedia.org/wiki/Newton%27s_method#Description
 	// Can make further refinements to ensure that the initialisation step is done even better
 	T := calculateT(startDate, opt.ExpDate) / 365.0
-	v := math.Sqrt(2*math.Pi/T) * opt.Price / opt.Spot
+	v := math.Sqrt(2*math.Pi/T) * opt.Price / refSpot
 	//fmt.Printf(“ — initial vol: %v\n”, v)
 	for i := 0; i < 100; i++ {
-		d1 := opt.d1(v, T)
-		d2 := opt.d2(v, T)
-		Vega := opt.Spot * norm.Pdf(d1) * math.Sqrt(T)
+		d1 := opt.d1(v, T, refSpot)
+		d2 := opt.d2(v, T, refSpot)
+		Vega := refSpot * norm.Pdf(d1) * math.Sqrt(T)
 		cp := 1.0
 		if opt.Type == "P" {
 			cp = -1.0
 		}
-		price0 := cp*opt.Spot*norm.Cdf(cp*d1) - cp*opt.Strike*math.Exp(-opt.RiskFreeRate*T)*norm.Cdf(cp*d2)
+		price0 := cp*refSpot*norm.Cdf(cp*d1) - cp*opt.Strike*math.Exp(-opt.RiskFreeRate*T)*norm.Cdf(cp*d2)
 		v = v - (price0-opt.Price)/Vega
 		//fmt.Printf(“ — next vol %v : %v / %v \n”, i, v,
 		//             math.Pow(10, -25))
@@ -95,35 +96,38 @@ func (opt *VanillaOption) impliedVol(startDate string) float64 {
 
 func (opt *VanillaOption) init() {
 	if opt.Sigma == -1 {
-		opt.Sigma = opt.impliedVol(opt.EvalDate)
+		opt.Sigma = opt.impliedVol(opt.EvalDate, opt.Spot)
 	}
 	maxDate := int(calculateT(opt.EvalDate, opt.ExpDate))
 	for daysToExpiry := 1; daysToExpiry <= maxDate; daysToExpiry++ {
-		T := float64(daysToExpiry) / 365.0
-		d1 := opt.d1(opt.Sigma, T)
-		d2 := opt.d2(opt.Sigma, T)
-		nPrime := math.Pow(math.Sqrt(2*math.Pi), -1) * math.Exp(-0.5*math.Pow(d1, 2))
-		qDisc := math.Exp(-opt.Q * T)
-		rDisc := math.Exp(-opt.RiskFreeRate * T)
-		pnl, delta, theta, gamma, vega := 0., 0., 0., 0., 0.
-		// fmt.Println(T, opt.Sigma, d1, d2, nPrime, qDisc, rDisc)
-		switch {
-		case opt.Type == "C":
-			// fmt.Println(norm.Cdf(d1))
-			pnl = (norm.Cdf(d1)*opt.Spot*qDisc - norm.Cdf(d2)*opt.Strike*rDisc) - opt.Price
-			delta = qDisc * norm.Cdf(d1)
-			theta = (-nPrime*0.5*opt.Spot*opt.Sigma/math.Sqrt(T) - opt.RiskFreeRate*opt.Strike*rDisc*norm.Cdf(d2)) / 365
-			//1 / 252 * (-(opt.Spot * qDisc * nPrime * opt.Sigma / (2 * math.Sqrt(T))) - (opt.RiskFreeRate * opt.Strike * rDisc * norm.Cdf(d2)))
-		case opt.Type == "P":
-			pnl = ((opt.Strike * norm.Cdf(-d2) * rDisc) - (opt.Spot * norm.Cdf(-d1) * qDisc)) - opt.Price
-			delta = qDisc * (norm.Cdf(d1) - 1)
-			theta = (-nPrime*0.5*opt.Spot*opt.Sigma/math.Sqrt(T) + opt.RiskFreeRate*opt.Strike*rDisc*norm.Cdf(-d2)) / 365
-		default:
-			fmt.Println("Option type is not recognised. \nPlease use C or P for call and P respectively")
+		for percentage := -10; percentage <= 10; percentage++ {
+			refSpot := (1 + float64(percentage)/100.0) * opt.Spot
+			T := float64(daysToExpiry) / 365.0
+			d1 := opt.d1(opt.Sigma, T, refSpot)
+			d2 := opt.d2(opt.Sigma, T, refSpot)
+			nPrime := math.Pow(math.Sqrt(2*math.Pi), -1) * math.Exp(-0.5*math.Pow(d1, 2))
+			qDisc := math.Exp(-opt.Q * T)
+			rDisc := math.Exp(-opt.RiskFreeRate * T)
+			pnl, delta, theta, gamma, vega := 0., 0., 0., 0., 0.
+			// fmt.Println(T, opt.Sigma, d1, d2, nPrime, qDisc, rDisc)
+			switch {
+			case opt.Type == "C":
+				// fmt.Println(norm.Cdf(d1))
+				pnl = (norm.Cdf(d1)*refSpot*qDisc - norm.Cdf(d2)*opt.Strike*rDisc) - opt.Price
+				delta = qDisc * norm.Cdf(d1)
+				theta = (-nPrime*0.5*refSpot*opt.Sigma/math.Sqrt(T) - opt.RiskFreeRate*opt.Strike*rDisc*norm.Cdf(d2)) / 365
+				//1 / 252 * (-(refSpot * qDisc * nPrime * opt.Sigma / (2 * math.Sqrt(T))) - (opt.RiskFreeRate * opt.Strike * rDisc * norm.Cdf(d2)))
+			case opt.Type == "P":
+				pnl = ((opt.Strike * norm.Cdf(-d2) * rDisc) - (refSpot * norm.Cdf(-d1) * qDisc)) - opt.Price
+				delta = qDisc * (norm.Cdf(d1) - 1)
+				theta = (-nPrime*0.5*refSpot*opt.Sigma/math.Sqrt(T) + opt.RiskFreeRate*opt.Strike*rDisc*norm.Cdf(-d2)) / 365
+			default:
+				fmt.Println("Option type is not recognised. \nPlease use C or P for call and P respectively")
+			}
+			gamma = nPrime * qDisc / (refSpot * opt.Sigma * math.Sqrt(T))
+			vega = 0.01 * refSpot * qDisc * math.Sqrt(T) * nPrime
+			opt.Greeks = append(opt.Greeks, Greek{T: float64(daysToExpiry), RefSpot: refSpot, Delta: delta, Vega: vega, Theta: theta, Gamma: gamma, PnL: pnl})
 		}
-		gamma = nPrime * qDisc / (opt.Spot * opt.Sigma * math.Sqrt(T))
-		vega = 0.01 * opt.Spot * qDisc * math.Sqrt(T) * nPrime
-		opt.Greeks = append(opt.Greeks, Greek{T: float64(daysToExpiry), Delta: delta, Vega: vega, Theta: theta, Gamma: gamma, PnL: pnl})
 	}
 }
 
