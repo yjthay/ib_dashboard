@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -16,9 +17,11 @@ var portfolio []pricer.VanillaOption
 func main() {
 	router := mux.NewRouter()
 	portfolio = append(portfolio, pricer.VanillaOption{Strike: 280, Spot: 280, RiskFreeRate: 0.05,
-		Price: 39.847556, EvalDate: "20200517", ExpDate: "20210517", Type: "C"})
+		Price: 39.847556, EvalDate: "20200517", ExpDate: "20201217", Type: "C"})
 	portfolio = append(portfolio, pricer.VanillaOption{Strike: 280, Spot: 280, RiskFreeRate: 0.05,
-		Price: 26.191795, EvalDate: "20200517", ExpDate: "20210517", Type: "P"})
+		Price: 26.191795, EvalDate: "20200517", ExpDate: "20201217", Type: "P"})
+	router.HandleFunc("/api/opts/keys", getOptKeys).Methods("GET")
+	router.HandleFunc("/api/opts/greek/keys", getGreekKeys).Methods("GET")
 	router.HandleFunc("/api/opts", getAllOpts).Methods("GET")
 	router.HandleFunc("/api/opts/{id}", getOpt).Methods("GET")
 	router.HandleFunc("/api/opts", createOpt).Methods("POST")
@@ -27,6 +30,30 @@ func main() {
 
 	fmt.Println("Starting up server...")
 	log.Fatal(http.ListenAndServe(":7777", router))
+}
+
+// Create a key for Greek struct
+func getGreekKeys(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var emptyGreek pricer.Greek
+	var output []string
+	typ := reflect.TypeOf(emptyGreek)
+	for i := 0; i < typ.NumField(); i++ {
+		output = append(output, typ.Field(i).Tag.Get("json"))
+	}
+	json.NewEncoder(w).Encode(output)
+}
+
+// Create a key for VanillaOpt struct
+func getOptKeys(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var emptyOpt pricer.VanillaOption
+	var output []string
+	val := reflect.ValueOf(emptyOpt)
+	for i := 0; i < val.Type().NumField(); i++ {
+		output = append(output, val.Type().Field(i).Tag.Get("json"))
+	}
+	json.NewEncoder(w).Encode(output)
 }
 
 // Get all options
