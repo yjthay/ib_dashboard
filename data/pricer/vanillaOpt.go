@@ -9,6 +9,7 @@ import (
 )
 
 var norm = gaussian.NewGaussian(0, 1)
+var dtfmt = "20060102"
 
 // VanillaOption is a struct that creates a container holding all the information of any option
 type VanillaOption struct {
@@ -26,13 +27,13 @@ type VanillaOption struct {
 
 // Greek is a struct that creates a container holding information of the greeks of the option
 type Greek struct {
-	T       float64 `json:"daysToExpiry"` // Time in days btw exp_date and eval_date
-	RefSpot float64 `json:"refSpot"`      // Spot used for options calc
-	Delta   float64 `json:"delta"`        // Delta of option
-	Gamma   float64 `json:"gamma"`        // Gamma of option
-	Theta   float64 `json:"theta"`        // Theta of option
-	Vega    float64 `json:"vega"`         // Vega of option
-	PnL     float64 `json:"PnL"`          // PnL of option
+	RefDate string  `json:"refDate"` // Date that greek is generated for
+	RefSpot float64 `json:"refSpot"` // Spot used for options calc
+	Delta   float64 `json:"delta"`   // Delta of option
+	Gamma   float64 `json:"gamma"`   // Gamma of option
+	Theta   float64 `json:"theta"`   // Theta of option
+	Vega    float64 `json:"vega"`    // Vega of option
+	PnL     float64 `json:"PnL"`     // PnL of option
 }
 
 // Opt is a function initialise an option and generate the associated risk metrics with it
@@ -55,7 +56,6 @@ func Opt(Type, EvalDate, ExpDate string, Strike, Spot, RiskFreeRate, Q, Price, S
 func calculateT(EvalDate string, ExpDate string) float64 {
 	// Calculate the time to expiry for an option and return it in days
 	// Time package uses 2006 Jan 02 as reference fmt https://golang.org/src/time/format.go
-	dtfmt := "20060102"
 	evalDt, _ := time.Parse(dtfmt, EvalDate)
 	expDt, _ := time.Parse(dtfmt, ExpDate)
 	return (expDt.Sub(evalDt).Hours() / 24)
@@ -102,6 +102,8 @@ func (opt *VanillaOption) init() {
 	for daysToExpiry := 1; daysToExpiry <= maxDate; daysToExpiry++ {
 		for percentage := -10; percentage <= 10; percentage++ {
 			refSpot := (1 + float64(percentage)/100.0) * opt.Spot
+			refDate, _ := time.Parse(dtfmt, opt.ExpDate)
+			refDate = refDate.AddDate(0, 0, -daysToExpiry)
 			T := float64(daysToExpiry) / 365.0
 			d1 := opt.d1(opt.Sigma, T, refSpot)
 			d2 := opt.d2(opt.Sigma, T, refSpot)
@@ -126,7 +128,7 @@ func (opt *VanillaOption) init() {
 			}
 			gamma = nPrime * qDisc / (refSpot * opt.Sigma * math.Sqrt(T))
 			vega = 0.01 * refSpot * qDisc * math.Sqrt(T) * nPrime
-			opt.Greeks = append(opt.Greeks, Greek{T: float64(daysToExpiry), RefSpot: refSpot, Delta: delta, Vega: vega, Theta: theta, Gamma: gamma, PnL: pnl})
+			opt.Greeks = append(opt.Greeks, Greek{RefDate: refDate.Format(dtfmt), RefSpot: refSpot, Delta: delta, Vega: vega, Theta: theta, Gamma: gamma, PnL: pnl})
 		}
 	}
 }
