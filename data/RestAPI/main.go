@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/yjthay/ib_dashboard/data/pricer"
+	"github.com/yjthay/ib_dashboard/data/RestAPI/pricer"
 )
 
 var portfolio []pricer.VanillaOption
